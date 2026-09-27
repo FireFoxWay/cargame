@@ -1,0 +1,370 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Afterglow Track Editor</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#060913">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@800;900&family=Chivo+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  color-scheme:dark;
+  --ink:#060913;--panel:#0b1124;--panel2:#10183a;--edge:rgba(160,182,255,.16);
+  --text:#e8eeff;--muted:#8f9bc2;--sodium:#ffb25c;--ember:#ff6a3d;--bad:#ff4d5e;--good:#3ee390;
+  --display:"Big Shoulders Display","Arial Narrow",Impact,sans-serif;
+  --mono:"Chivo Mono",ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%;margin:0;background:var(--ink);color:var(--text);font-family:var(--mono);font-size:13px;overflow:hidden}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+button:focus-visible,input:focus-visible{outline:2px solid var(--sodium);outline-offset:2px}
+.app{display:grid;grid-template-columns:minmax(0,1fr) 360px;height:100%}
+.stage{position:relative;overflow:hidden;background:#070b18}
+#map{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:crosshair}
+.hint{position:absolute;left:16px;bottom:14px;right:16px;display:flex;flex-wrap:wrap;gap:6px 16px;font-size:11px;color:var(--muted);pointer-events:none}
+.hint b{color:var(--text);font-weight:500}
+.brand{position:absolute;left:16px;top:12px;pointer-events:none}
+.brand h1{margin:0;font-family:var(--display);font-weight:900;font-size:30px;text-transform:uppercase;line-height:.9}
+.brand h1 span{background:linear-gradient(180deg,#ffe0b0,var(--sodium) 45%,var(--ember));-webkit-background-clip:text;background-clip:text;color:transparent}
+.brand p{margin:4px 0 0;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
+.tools{position:absolute;right:14px;top:12px;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;max-width:70%}
+aside{background:var(--panel);border-left:1px solid var(--edge);overflow-y:auto;padding:16px;display:grid;grid-auto-rows:max-content;gap:18px;align-content:start}
+.lbl{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin:0}
+.btn{appearance:none;border:1px solid var(--edge);background:var(--panel2);border-radius:3px;padding:7px 10px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;transition:border-color .15s}
+.btn:hover{border-color:rgba(255,178,92,.6)}
+.btn.primary{background:linear-gradient(180deg,#ffc27a,var(--sodium) 50%,#f08a3a);color:#1a0d05;border-color:transparent;font-weight:700}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.row{display:flex;gap:6px;flex-wrap:wrap}
+.levels{list-style:none;margin:0;padding:0;display:grid;gap:4px;max-height:260px;overflow-y:auto}
+.levels li{display:grid;grid-template-columns:24px minmax(0,1fr) auto;gap:8px;align-items:center;padding:6px 8px;border:1px solid transparent;border-radius:3px;cursor:pointer}
+.levels li:hover{background:rgba(255,255,255,.03)}
+.levels li[aria-selected="true"]{border-color:var(--sodium);background:rgba(255,178,92,.08)}
+.levels .n{font-family:var(--display);font-weight:900;font-size:18px;color:var(--muted)}
+.levels .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.st{color:var(--sodium);font-size:11px;letter-spacing:.08em}
+.st .off{color:rgba(255,255,255,.16)}
+.field{display:grid;gap:5px}
+.field input[type=text],.field input[type=password]{background:#070b18;border:1px solid var(--edge);border-radius:3px;padding:8px 9px;width:100%}
+.stars{display:flex;gap:2px}
+.stars button{background:none;border:0;font-size:22px;line-height:1;padding:0 2px;color:rgba(255,255,255,.18)}
+.stars button.on{color:var(--sodium)}
+.stats{display:grid;grid-template-columns:auto auto;gap:5px 14px;font-variant-numeric:tabular-nums}
+.stats dt{color:var(--muted)}
+.stats dd{margin:0;text-align:right}
+.stats dd.bad{color:var(--bad)}.stats dd.ok{color:var(--good)}
+.issues{margin:0;padding:0;list-style:none;display:grid;gap:4px;font-size:12px}
+.issues li{padding:6px 8px;border-left:3px solid var(--bad);background:rgba(255,77,94,.07)}
+.issues li.ok{border-color:var(--good);background:rgba(62,227,144,.07)}
+.note{font-size:11px;color:var(--muted);line-height:1.6;margin:0}
+.note a{color:var(--sodium)}
+.status{font-size:11px;min-height:1.4em;margin:0}
+.status.err{color:var(--bad)}.status.ok{color:var(--good)}
+details summary{cursor:pointer;list-style:none}
+details summary::-webkit-details-marker{display:none}
+@media (max-width:820px){.app{grid-template-columns:1fr;grid-template-rows:55% 45%}aside{border-left:0;border-top:1px solid var(--edge)}.tools{max-width:60%}}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="stage">
+    <canvas id="map" aria-label="Track map"></canvas>
+    <div class="brand"><h1><span>Afterglow</span> Track Editor</h1><p id="modeLbl">Top-down · north is up</p></div>
+    <div class="tools">
+      <button class="btn" id="tSmooth" title="Relax sharp kinks">Smooth</button>
+      <button class="btn" id="tReverse" title="Race the other way round">Reverse</button>
+      <button class="btn" id="tGrow">Scale +</button>
+      <button class="btn" id="tShrink">Scale −</button>
+      <button class="btn" id="tFit">Fit view</button>
+      <button class="btn" id="tUndo">Undo</button>
+    </div>
+    <div class="hint">
+      <span><b>Click</b> empty space: add a point (it joins the nearest stretch)</span>
+      <span><b>Drag</b> a point: move it</span>
+      <span><b>Right-click</b> or <b>Alt+click</b> a point: delete</span>
+      <span><b>Drag</b> empty space: pan · <b>Wheel</b>: zoom</span>
+    </div>
+  </div>
+  <aside>
+    <div class="row" style="justify-content:space-between;align-items:center">
+      <p class="lbl">Levels · in race order</p>
+      <a class="btn" href="index.html">Open game</a>
+    </div>
+    <ul class="levels" id="levels" role="listbox" aria-label="Levels"></ul>
+    <div class="row">
+      <button class="btn" id="lNew">New level</button>
+      <button class="btn" id="lDup">Duplicate</button>
+      <button class="btn" id="lUp">Move up</button>
+      <button class="btn" id="lDown">Move down</button>
+      <button class="btn" id="lDel">Delete</button>
+    </div>
+
+    <div class="field"><label class="lbl" for="fName">Name</label><input type="text" id="fName" maxlength="28" autocomplete="off"></div>
+    <div class="field"><span class="lbl">Difficulty</span><div class="stars" id="fStars" role="radiogroup" aria-label="Difficulty"></div></div>
+
+    <div class="field">
+      <p class="lbl">Checks</p>
+      <dl class="stats" id="stats"></dl>
+      <ul class="issues" id="issues"></ul>
+    </div>
+
+    <div class="row">
+      <button class="btn primary" id="aTest">Test drive</button>
+      <button class="btn" id="aDownload">Download levels.json</button>
+      <button class="btn" id="aCopy">Copy JSON</button>
+    </div>
+
+    <details id="pub">
+      <summary class="lbl" style="color:var(--sodium)">Publish to the game ▸</summary>
+      <div style="display:grid;gap:10px;margin-top:10px">
+        <p class="note">Writes <strong>levels.json</strong> to your GitHub repo in one commit. Everyone running the game picks the new levels up on their next launch. Needs a <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">fine-grained token</a> with <em>Contents: read and write</em> on this repo only. It stays in this browser.</p>
+        <div class="field"><label class="lbl" for="gRepo">Repository</label><input type="text" id="gRepo" autocomplete="off" placeholder="owner/repo"></div>
+        <div class="field"><label class="lbl" for="gBranch">Branch</label><input type="text" id="gBranch" autocomplete="off"></div>
+        <div class="field"><label class="lbl" for="gToken">Token</label><input type="password" id="gToken" autocomplete="off" placeholder="github_pat_…"></div>
+        <button class="btn primary" id="gPush">Publish levels</button>
+      </div>
+    </details>
+    <p class="status" id="status" role="status"></p>
+    <p class="note">Your work is saved in this browser as you go. <button class="btn" id="aRevert" style="padding:3px 7px">Reload from game</button> throws the draft away.</p>
+  </aside>
+</div>
+
+<script type="module">
+const $ = (id) => document.getElementById(id);
+const store = { get(k, d) { try { const v = localStorage.getItem('afterglow.' + k); return v == null ? d : JSON.parse(v); } catch { return d; } }, set(k, v) { try { localStorage.setItem('afterglow.' + k, JSON.stringify(v)); } catch {} } };
+const status = (msg, cls = '') => { const s = $('status'); s.textContent = msg; s.className = 'status ' + cls; };
+let THREE;
+try { THREE = await import('https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.min.js'); }
+catch { status('Could not load the track maths library. Check your connection and reload.', 'err'); throw new Error('three'); }
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});
+
+/* Same limits the game's world is built for. */
+const BOUNDS = { x0: -500, x1: 1150, z0: -950, z1: 380 };
+const LIM = { minR: 30, warnR: 40, minSep: 72, minLen: 1400, maxLen: 3800, minPts: 6 };
+const HALF = 7.9;
+
+/* ---------------- data ---------------- */
+let levels = store.get('editorDraft', null);
+let sel = 0;
+async function loadFromGame() {
+  try { const r = await fetch('levels.json', { cache: 'no-store' }); if (!r.ok) throw 0; const j = await r.json(); return j.levels; }
+  catch { return null; }
+}
+if (!levels) {
+  levels = await loadFromGame();
+  if (!levels) { levels = [{ name: 'My first circuit', stars: 2, track: defaultTrack() }]; status('Could not read levels.json (open the editor from the hosted app to edit the live list). Starting a fresh list.', 'err'); }
+}
+function defaultTrack() { const p = []; for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2; p.push([Math.round(300 + Math.sin(a) * 420), Math.round(-280 + Math.cos(a) * 330)]); } return p; }
+const cur = () => levels[sel];
+const history = [];
+function snapshot() { history.push(JSON.stringify(levels)); if (history.length > 80) history.shift(); }
+function save() { store.set('editorDraft', levels); }
+
+/* ---------------- analysis (mirrors the game's own track build) ---------------- */
+function analyse(pts) {
+  const out = { ok: false, issues: [], samples: [], bad: [], len: 0, minR: Infinity, minSep: Infinity, corners: 0, start: 0 };
+  if (pts.length < LIM.minPts) { out.issues.push(`Needs at least ${LIM.minPts} points (has ${pts.length}).`); return out; }
+  const curve = new THREE.CatmullRomCurve3(pts.map(([x, z]) => new THREE.Vector3(x, 0, z)), true, 'centripetal', 0.5);
+  curve.arcLengthDivisions = 2000;
+  const L = curve.getLength(), N = Math.max(40, Math.round(L / 4)), P = curve.getSpacedPoints(N).slice(0, N);
+  out.len = L; out.samples = P; const bad = new Uint8Array(N);
+  let oob = 0;
+  const hd = P.map((p, i) => { const q = P[(i + 1) % N]; return Math.atan2(q.x - p.x, q.z - p.z); });
+  const wrap = (a) => { while (a > Math.PI) a -= 2 * Math.PI; while (a < -Math.PI) a += 2 * Math.PI; return a; };
+  for (let i = 0; i < N; i++) {
+    const a = P[(i - 2 + N) % N], b = P[i], c = P[(i + 2) % N];
+    const ab = a.distanceTo(b), bc = b.distanceTo(c), ca = c.distanceTo(a), cr = Math.abs((b.x - a.x) * (c.z - a.z) - (b.z - a.z) * (c.x - a.x));
+    const r = cr < 1e-6 ? 1e9 : ab * bc * ca / (2 * cr);
+    if (r < out.minR) out.minR = r;
+    if (r < LIM.minR) bad[i] = 1;
+    if (b.x < BOUNDS.x0 || b.x > BOUNDS.x1 || b.z < BOUNDS.z0 || b.z > BOUNDS.z1) { bad[i] = 1; oob++; }
+  }
+  const skip = Math.ceil(90 / (L / N));
+  for (let i = 0; i < N; i++) for (let j = i + skip; j < N; j++) {
+    if (N - (j - i) < skip) continue;
+    const d = P[i].distanceTo(P[j]);
+    if (d < out.minSep) out.minSep = d;
+    if (d < LIM.minSep) { bad[i] = bad[j] = 1; }
+  }
+  let inT = false; for (let i = 0; i < N; i++) { const k = Math.abs(wrap(hd[(i + 3) % N] - hd[(i - 3 + N) % N])) / (6 * L / N) > 1 / 190; if (k && !inT) out.corners++; inT = k; }
+  let best = 0, bv = Infinity; for (let i = 0; i < N; i++) { let v = 0; for (let k = -15; k <= 6; k++) v = Math.max(v, Math.abs(wrap(hd[(i + k + 1 + N) % N] - hd[(i + k + N) % N]))); if (v < bv) { bv = v; best = i; } }
+  out.start = best; out.bad = bad;
+  if (out.minR < LIM.minR) out.issues.push(`A corner is too tight: ${out.minR.toFixed(0)} m radius (the cars need ${LIM.minR} m).`);
+  if (out.minSep < LIM.minSep) out.issues.push(`Two parts of the track run ${out.minSep.toFixed(0)} m apart; they need ${LIM.minSep} m so the barriers don't overlap.`);
+  if (oob) out.issues.push('Part of the track leaves the buildable area (the dashed box).');
+  if (L < LIM.minLen) out.issues.push(`Too short: ${(L / 1000).toFixed(2)} km (at least ${(LIM.minLen / 1000).toFixed(1)} km).`);
+  if (L > LIM.maxLen) out.issues.push(`Too long: ${(L / 1000).toFixed(2)} km (at most ${(LIM.maxLen / 1000).toFixed(1)} km).`);
+  out.ok = out.issues.length === 0;
+  return out;
+}
+let A = analyse(cur().track);
+
+/* ---------------- view ---------------- */
+const cv = $('map'), g = cv.getContext('2d');
+const view = { cx: 325, cz: -285, k: 0.5 };
+let W = 1, H = 1, dpr = 1;
+function resize() { const r = cv.getBoundingClientRect(); dpr = Math.min(devicePixelRatio || 1, 2); W = r.width; H = r.height; cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); draw(); }
+const toS = (x, z) => [W / 2 - (x - view.cx) * view.k, H / 2 - (z - view.cz) * view.k];
+const toW = (sx, sy) => [view.cx - (sx - W / 2) / view.k, view.cz - (sy - H / 2) / view.k];
+function fit() {
+  const p = cur().track; if (!p.length) return;
+  let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity; for (const [x, z] of p) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); z0 = Math.min(z0, z); z1 = Math.max(z1, z); }
+  view.cx = (x0 + x1) / 2; view.cz = (z0 + z1) / 2; view.k = Math.min((W - 120) / Math.max(x1 - x0, 200), (H - 140) / Math.max(z1 - z0, 200)); draw();
+}
+function draw() {
+  g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  g.fillStyle = '#070b18'; g.fillRect(0, 0, W, H);
+  // sea to the north, grid
+  const [, seaY] = toS(0, 440); g.fillStyle = 'rgba(40,70,120,.18)'; g.fillRect(0, 0, W, Math.max(0, seaY));
+  g.fillStyle = 'rgba(143,155,194,.55)'; g.font = '10px "Chivo Mono", monospace'; if (seaY > 24) g.fillText('HARBOUR · CITY LIGHTS', 16, seaY - 10);
+  g.strokeStyle = 'rgba(160,182,255,.06)'; g.lineWidth = 1;
+  const step = 100; const [wx0, wz0] = toW(W, H), [wx1, wz1] = toW(0, 0);
+  for (let x = Math.floor(Math.min(wx0, wx1) / step) * step; x < Math.max(wx0, wx1); x += step) { const [sx] = toS(x, 0); g.beginPath(); g.moveTo(sx, 0); g.lineTo(sx, H); g.stroke(); }
+  for (let z = Math.floor(Math.min(wz0, wz1) / step) * step; z < Math.max(wz0, wz1); z += step) { const [, sy] = toS(0, z); g.beginPath(); g.moveTo(0, sy); g.lineTo(W, sy); g.stroke(); }
+  // buildable box
+  const [bx0, by0] = toS(BOUNDS.x1, BOUNDS.z1), [bx1, by1] = toS(BOUNDS.x0, BOUNDS.z0);
+  g.setLineDash([6, 6]); g.strokeStyle = 'rgba(255,178,92,.35)'; g.strokeRect(bx0, by0, bx1 - bx0, by1 - by0); g.setLineDash([]);
+  // scale bar
+  g.fillStyle = 'rgba(143,155,194,.8)'; const sb = 100 * view.k; g.fillRect(16, 70, sb, 2); g.fillText('100 m', 16, 64);
+  const S = A.samples, N = S.length;
+  if (N) {
+    const path = () => { g.beginPath(); S.forEach((p, i) => { const [x, y] = toS(p.x, p.z); i ? g.lineTo(x, y) : g.moveTo(x, y); }); g.closePath(); };
+    g.lineJoin = 'round'; g.lineCap = 'round';
+    path(); g.strokeStyle = 'rgba(160,182,255,.10)'; g.lineWidth = Math.max(3, (16.5 * 2) * view.k); g.stroke();
+    path(); g.strokeStyle = '#2a3150'; g.lineWidth = Math.max(3, HALF * 2 * view.k); g.stroke();
+    path(); g.strokeStyle = 'rgba(232,238,255,.85)'; g.lineWidth = 1.2; g.stroke();
+    g.strokeStyle = 'rgba(255,77,94,.9)'; g.lineWidth = Math.max(4, HALF * 2 * view.k);
+    for (let i = 0; i < N; i++) if (A.bad[i]) { const a = S[i], b = S[(i + 1) % N]; const [x0, y0] = toS(a.x, a.z), [x1, y1] = toS(b.x, b.z); g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke(); }
+    // start line and direction
+    const s0 = S[A.start], s1 = S[(A.start + 2) % N]; const [sx, sy] = toS(s0.x, s0.z), [tx, ty] = toS(s1.x, s1.z);
+    const dx = tx - sx, dy = ty - sy, dl = Math.hypot(dx, dy) || 1, nx = -dy / dl, ny = dx / dl, hw = Math.max(8, HALF * view.k + 4);
+    g.strokeStyle = '#fff'; g.lineWidth = 3; g.beginPath(); g.moveTo(sx + nx * hw, sy + ny * hw); g.lineTo(sx - nx * hw, sy - ny * hw); g.stroke();
+    g.fillStyle = '#ffb25c'; g.beginPath(); const ax = sx + dx / dl * 22, ay = sy + dy / dl * 22; g.moveTo(ax, ay); g.lineTo(sx + dx / dl * 10 + nx * 6, sy + dy / dl * 10 + ny * 6); g.lineTo(sx + dx / dl * 10 - nx * 6, sy + dy / dl * 10 - ny * 6); g.closePath(); g.fill();
+    g.fillStyle = 'rgba(255,255,255,.8)'; g.fillText('START', sx + nx * (hw + 8) - 14, sy + ny * (hw + 8));
+  }
+  cur().track.forEach(([x, z], i) => {
+    const [sx, sy] = toS(x, z); g.beginPath(); g.arc(sx, sy, i === drag?.i || i === hover ? 8 : 6, 0, Math.PI * 2);
+    g.fillStyle = i === 0 ? '#ffb25c' : '#e8eeff'; g.fill(); g.lineWidth = 2; g.strokeStyle = '#060913'; g.stroke();
+  });
+}
+
+/* ---------------- interaction ---------------- */
+let drag = null, hover = -1, pan = null;
+function pick(sx, sy) { let b = -1, bd = 14 * 14; cur().track.forEach(([x, z], i) => { const [px, py] = toS(x, z), d = (px - sx) ** 2 + (py - sy) ** 2; if (d < bd) { bd = d; b = i; } }); return b; }
+function insertAt(wx, wz) {
+  const p = cur().track; let bi = p.length, bd = Infinity;
+  for (let i = 0; i < p.length; i++) { const [ax, az] = p[i], [bx, bz] = p[(i + 1) % p.length]; const vx = bx - ax, vz = bz - az, t = Math.max(0, Math.min(1, ((wx - ax) * vx + (wz - az) * vz) / (vx * vx + vz * vz || 1))); const d = (ax + vx * t - wx) ** 2 + (az + vz * t - wz) ** 2; if (d < bd) { bd = d; bi = i + 1; } }
+  p.splice(bi, 0, [Math.round(wx), Math.round(wz)]); return bi;
+}
+const pos = (e) => { const r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+cv.addEventListener('contextmenu', (e) => e.preventDefault());
+cv.addEventListener('pointerdown', (e) => {
+  const [sx, sy] = pos(e), i = pick(sx, sy); cv.setPointerCapture(e.pointerId);
+  if (i >= 0 && (e.button === 2 || e.altKey)) { if (cur().track.length <= LIM.minPts) { status(`A track needs at least ${LIM.minPts} points.`, 'err'); return; } snapshot(); cur().track.splice(i, 1); changed(); return; }
+  if (i >= 0) { snapshot(); drag = { i }; return; }
+  if (e.button === 0) pan = { sx, sy, cx: view.cx, cz: view.cz, moved: false };
+});
+cv.addEventListener('pointermove', (e) => {
+  const [sx, sy] = pos(e);
+  if (drag) { const [wx, wz] = toW(sx, sy); cur().track[drag.i] = [Math.round(wx), Math.round(wz)]; A = analyse(cur().track); draw(); renderChecks(); return; }
+  if (pan) { if (Math.hypot(sx - pan.sx, sy - pan.sy) > 4) pan.moved = true; view.cx = pan.cx + (sx - pan.sx) / view.k; view.cz = pan.cz + (sy - pan.sy) / view.k; draw(); return; }
+  const h = pick(sx, sy); if (h !== hover) { hover = h; cv.style.cursor = h >= 0 ? 'grab' : 'crosshair'; draw(); }
+});
+cv.addEventListener('pointerup', (e) => {
+  if (drag) { drag = null; changed(); return; }
+  if (pan && !pan.moved) { const [sx, sy] = pos(e), [wx, wz] = toW(sx, sy); snapshot(); insertAt(wx, wz); changed(); }
+  pan = null;
+});
+cv.addEventListener('wheel', (e) => {
+  e.preventDefault(); const [sx, sy] = pos(e), [wx, wz] = toW(sx, sy);
+  view.k = Math.max(0.08, Math.min(4, view.k * Math.exp(-e.deltaY * 0.0015)));
+  const [nx, nz] = toW(sx, sy); view.cx += wx - nx; view.cz += wz - nz; draw();
+}, { passive: false });
+addEventListener('keydown', (e) => { if ((e.ctrlKey || e.metaKey) && e.key === 'z') { e.preventDefault(); undo(); } });
+
+/* ---------------- tools ---------------- */
+function undo() { const h = history.pop(); if (!h) return; levels = JSON.parse(h); sel = Math.min(sel, levels.length - 1); changed(false); renderList(); }
+function transform(fn) { snapshot(); const p = cur().track; let cx = 0, cz = 0; p.forEach(([x, z]) => { cx += x; cz += z; }); cx /= p.length; cz /= p.length; cur().track = p.map(([x, z]) => fn(x, z, cx, cz)).map(([x, z]) => [Math.round(x), Math.round(z)]); changed(); }
+$('tGrow').onclick = () => transform((x, z, cx, cz) => [cx + (x - cx) * 1.08, cz + (z - cz) * 1.08]);
+$('tShrink').onclick = () => transform((x, z, cx, cz) => [cx + (x - cx) / 1.08, cz + (z - cz) / 1.08]);
+$('tReverse').onclick = () => { snapshot(); cur().track.reverse(); changed(); };
+$('tSmooth').onclick = () => { snapshot(); const p = cur().track, n = p.length; cur().track = p.map(([x, z], i) => { const [ax, az] = p[(i - 1 + n) % n], [bx, bz] = p[(i + 1) % n]; return [Math.round(x * 0.6 + (ax + bx) * 0.2), Math.round(z * 0.6 + (az + bz) * 0.2)]; }); changed(); };
+$('tFit').onclick = fit;
+$('tUndo').onclick = undo;
+
+/* ---------------- panel ---------------- */
+function starsHTML(n) { return '★'.repeat(n) + '<span class="off">' + '★'.repeat(5 - n) + '</span>'; }
+function renderList() {
+  const ul = $('levels'); ul.innerHTML = '';
+  levels.forEach((l, i) => {
+    const li = document.createElement('li'); li.setAttribute('role', 'option'); li.setAttribute('aria-selected', String(i === sel)); li.tabIndex = 0;
+    li.innerHTML = `<span class="n">${i + 1}</span><span class="nm"></span><span class="st">${starsHTML(l.stars || 1)}</span>`;
+    li.querySelector('.nm').textContent = l.name;
+    li.onclick = () => { sel = i; A = analyse(cur().track); renderList(); renderFields(); fit(); renderChecks(); };
+    li.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); li.click(); } };
+    ul.append(li);
+  });
+}
+function renderFields() {
+  $('fName').value = cur().name;
+  const st = $('fStars'); st.innerHTML = '';
+  for (let k = 1; k <= 5; k++) { const b = document.createElement('button'); b.textContent = '★'; b.className = k <= (cur().stars || 1) ? 'on' : ''; b.setAttribute('role', 'radio'); b.setAttribute('aria-label', k + ' star' + (k > 1 ? 's' : '')); b.setAttribute('aria-checked', String(k === cur().stars)); b.onclick = () => { snapshot(); cur().stars = k; changed(); renderFields(); }; st.append(b); }
+}
+function renderChecks() {
+  const lap = A.len ? A.len / 41 : 0;
+  const rows = [['Length', A.len ? (A.len / 1000).toFixed(2) + ' km' : '—', A.len >= LIM.minLen && A.len <= LIM.maxLen],
+    ['Tightest corner', isFinite(A.minR) ? A.minR.toFixed(0) + ' m' : '—', A.minR >= LIM.minR],
+    ['Closest pass', isFinite(A.minSep) ? A.minSep.toFixed(0) + ' m' : '—', A.minSep >= LIM.minSep],
+    ['Corners', String(A.corners), true], ['Points', String(cur().track.length), cur().track.length >= LIM.minPts], ['Rough lap time', lap ? Math.floor(lap / 60) + ':' + String(Math.round(lap % 60)).padStart(2, '0') : '—', true]];
+  $('stats').innerHTML = rows.map(([k, v, ok]) => `<dt>${k}</dt><dd class="${ok ? '' : 'bad'}">${v}</dd>`).join('');
+  $('issues').innerHTML = A.ok ? '<li class="ok">Ready to race: every check passes.</li>' : A.issues.map((t) => `<li>${t}</li>`).join('');
+  const allOk = levels.every((l) => analyse(l.track).ok);
+  $('gPush').disabled = !allOk; $('aTest').disabled = !A.ok;
+  $('gPush').title = allOk ? '' : 'Every level must pass its checks before publishing';
+}
+function changed(snap = true) { A = analyse(cur().track); save(); draw(); renderChecks(); renderList(); }
+$('fName').addEventListener('input', (e) => { cur().name = e.target.value.trim() || 'Untitled'; save(); renderList(); });
+$('fName').addEventListener('focus', snapshot);
+$('lNew').onclick = () => { snapshot(); levels.splice(sel + 1, 0, { name: 'New circuit ' + (levels.length + 1), stars: 2, track: defaultTrack() }); sel++; changed(); renderFields(); fit(); };
+$('lDup').onclick = () => { snapshot(); levels.splice(sel + 1, 0, JSON.parse(JSON.stringify({ ...cur(), name: cur().name + ' copy' }))); sel++; changed(); renderFields(); };
+$('lDel').onclick = () => { if (levels.length <= 1) { status('The game needs at least one level.', 'err'); return; } snapshot(); levels.splice(sel, 1); sel = Math.min(sel, levels.length - 1); changed(); renderFields(); fit(); status('Level deleted. Undo brings it back.'); };
+const move = (d) => { const j = sel + d; if (j < 0 || j >= levels.length) return; snapshot(); [levels[sel], levels[j]] = [levels[j], levels[sel]]; sel = j; changed(); };
+$('lUp').onclick = () => move(-1); $('lDown').onclick = () => move(1);
+$('aRevert').onclick = async () => { const l = await loadFromGame(); if (!l) { status('Could not read levels.json from the game.', 'err'); return; } snapshot(); levels = l; sel = 0; changed(); renderFields(); fit(); status('Reloaded the game\'s levels. Undo restores your draft.', 'ok'); };
+
+/* ---------------- output ---------------- */
+const json = () => JSON.stringify({ version: 1, levels: levels.map((l) => ({ name: l.name, stars: l.stars || 1, track: l.track })) }, null, 0).replace(/\},\{/g, '},\n{') + '\n';
+$('aTest').onclick = () => { store.set('testTrack', { name: cur().name, stars: cur().stars, track: cur().track }); store.set('level', 'test'); store.set('autostart', 'race'); location.href = 'index.html'; };
+$('aDownload').onclick = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([json()], { type: 'application/json' })); a.download = 'levels.json'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); status('Downloaded levels.json. Put it next to index.html in the repo.', 'ok'); };
+$('aCopy').onclick = async () => { try { await navigator.clipboard.writeText(json()); status('Copied levels.json to the clipboard.', 'ok'); } catch { status('The browser blocked the clipboard. Use Download instead.', 'err'); } };
+const gh = store.get('gh', {});
+$('gRepo').value = gh.repo || 'FireFoxWay/cargame'; $('gBranch').value = gh.branch || 'main'; $('gToken').value = gh.token || '';
+for (const id of ['gRepo', 'gBranch', 'gToken']) $(id).addEventListener('change', () => store.set('gh', { repo: $('gRepo').value.trim(), branch: $('gBranch').value.trim(), token: $('gToken').value.trim() }));
+const b64 = (str) => { const bytes = new TextEncoder().encode(str); let s = ''; for (const b of bytes) s += String.fromCharCode(b); return btoa(s); };
+$('gPush').onclick = async () => {
+  const repo = $('gRepo').value.trim(), branch = $('gBranch').value.trim() || 'main', token = $('gToken').value.trim();
+  if (!/^[\w.-]+\/[\w.-]+$/.test(repo)) { status('Repository must look like owner/repo.', 'err'); return; }
+  if (!token) { status('Paste a GitHub token first.', 'err'); return; }
+  const api = `https://api.github.com/repos/${repo}/contents/levels.json`, hdr = { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json' };
+  $('gPush').disabled = true; status('Publishing…');
+  try {
+    let sha; const r0 = await fetch(`${api}?ref=${encodeURIComponent(branch)}`, { headers: hdr, cache: 'no-store' });
+    if (r0.ok) sha = (await r0.json()).sha; else if (r0.status !== 404) throw new Error(r0.status === 401 ? 'GitHub rejected the token.' : `GitHub said ${r0.status} while reading levels.json.`);
+    const body = { message: `Update levels from the track editor (${levels.length} circuits)`, content: b64(json()), branch, ...(sha ? { sha } : {}) };
+    const r1 = await fetch(api, { method: 'PUT', headers: { ...hdr, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    if (!r1.ok) { const t = await r1.json().catch(() => ({})); throw new Error(r1.status === 403 || r1.status === 404 ? 'The token cannot write to this repo. Give it Contents: read and write on ' + repo + '.' : (t.message || `GitHub said ${r1.status}.`)); }
+    const j = await r1.json(); status(`Published: commit ${j.commit.sha.slice(0, 7)}. The game loads the new levels on its next launch.`, 'ok');
+  } catch (err) { status(err.message || 'Publishing failed. Check your connection.', 'err'); }
+  finally { renderChecks(); }
+};
+
+addEventListener('resize', resize);
+renderList(); renderFields(); resize(); fit(); renderChecks();
+</script>
+</body>
+</html>

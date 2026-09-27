@@ -1,0 +1,19 @@
+{
+  "name": "Afterglow Circuit",
+  "short_name": "Afterglow",
+  "description": "A 3D night racing game on a wet harbour circuit.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "fullscreen",
+  "display_override": ["fullscreen", "standalone"],
+  "orientation": "landscape",
+  "background_color": "#060913",
+  "theme_color": "#060913",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Level editor", "url": "./editor.html", "icons": [{ "src": "icon.svg", "sizes": "any" }] }
+  ]
+}

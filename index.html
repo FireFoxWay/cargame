@@ -4,6 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Afterglow Circuit</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#060913">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800;900&family=Chivo+Mono:wght@400;500;700&display=swap">
@@ -229,7 +232,7 @@ body.touch .gauge small{font-size:8px}
       <div><dt>Your record</dt><dd id="fRec">—</dd></div>
     </dl>
     <div class="modes">
-      <button id="btnRace" class="btn primary"><b>Career</b><small id="careerSub">Level 1 of 12</small></button>
+      <button id="btnRace" class="btn primary"><b>Career</b><small id="careerSub">Career</small></button>
       <button id="btnShop" class="btn"><b>Workshop</b><small>Upgrade &amp; tune</small></button>
       <button id="btnHot" class="btn"><b>Hot lap</b><small>Solo on this track</small></button>
     </div>
@@ -303,7 +306,7 @@ body.touch .gauge small{font-size:8px}
 
 <section id="career" class="modal" hidden>
   <div class="card xl">
-    <div class="cardhead"><div><p class="lbl">Season · 12 circuits</p><h2>Career</h2></div><span class="coins"><i></i><span id="coinCareer">0</span></span></div>
+    <div class="cardhead"><div><p class="lbl" id="seasonLbl">Season</p><h2>Career</h2></div><span class="coins"><i></i><span id="coinCareer">0</span></span></div>
     <div class="timeline" id="timeline" role="group" aria-label="Circuits"></div>
     <div class="detail">
       <div style="display:grid;gap:12px">
@@ -366,6 +369,7 @@ if (!document.createElement('canvas').getContext('webgl2')) {
   failLoad('This browser has WebGL 2 switched off, so the circuit cannot be drawn. A current Chrome, Edge, Firefox or Safari will run it.');
   throw new Error('WebGL2 unavailable');
 }
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});
 setLoad(0.08, 'Surveying the circuit');
 await tick();
 
@@ -474,19 +478,21 @@ camera.position.set(0, 3, -150);
 /* ============================================================
    Track
    ============================================================ */
-const ORIGINAL_CTRL = [[0,-260],[0,-100],[0,60],[0,180],[15,250],[60,285],[120,280],[160,240],[170,180],[200,130],[260,120],[320,150],[350,210],[340,280],[360,340],[430,360],[500,330],[520,260],[500,180],[460,120],[460,40],[510,-20],[540,-100],[520,-190],[450,-240],[360,-230],[300,-180],[230,-190],[180,-250],[120,-320],[50,-330],[10,-300]];
-const GEN_TRACKS = [[[310,135],[417,124],[527,82],[607,26],[672,-51],[709,-158],[696,-258],[650,-338],[593,-399],[526,-454],[458,-505],[366,-560],[263,-595],[102,-591],[-21,-522],[-77,-429],[-87,-338],[-64,-237],[-34,-158],[-4,-84],[36,-9],[104,64],[196,114]],[[298,112],[425,111],[554,87],[669,23],[731,-84],[725,-187],[674,-284],[604,-385],[571,-446],[496,-554],[390,-626],[220,-643],[85,-578],[1,-470],[-28,-403],[-71,-299],[-99,-223],[-101,-77],[-62,-8],[48,69],[155,99]],[[277,172],[464,120],[568,36],[677,-91],[771,-196],[844,-332],[809,-540],[637,-644],[388,-619],[242,-541],[101,-481],[-68,-441],[-232,-328],[-276,-177],[-209,-29],[-59,88],[132,159]],[[293,195],[473,150],[623,33],[645,-95],[625,-229],[660,-333],[662,-501],[490,-621],[305,-631],[122,-614],[-46,-517],[-59,-353],[-4,-235],[-37,-111],[-43,73],[102,187]],[[276,155],[430,192],[609,145],[671,32],[605,-147],[557,-201],[550,-270],[619,-384],[623,-509],[504,-610],[345,-615],[248,-598],[94,-561],[-10,-508],[-77,-392],[-67,-301],[-38,-224],[-10,-126],[22,-29],[84,46],[197,119]],[[289,236],[438,184],[539,106],[627,12],[666,-76],[660,-177],[655,-241],[685,-336],[718,-453],[667,-618],[573,-680],[369,-695],[213,-635],[133,-567],[62,-466],[-10,-394],[-93,-345],[-176,-266],[-188,-146],[-108,-47],[-28,30],[49,129],[152,212]],[[335,258],[474,273],[598,154],[627,4],[700,-110],[764,-187],[743,-320],[662,-419],[623,-529],[566,-631],[404,-691],[250,-644],[92,-583],[-20,-549],[-131,-419],[-133,-332],[-150,-199],[-168,-77],[-97,16],[82,63],[180,129]],[[295,239],[530,164],[662,60],[715,-102],[659,-248],[648,-348],[584,-489],[487,-550],[291,-688],[57,-721],[-55,-524],[-26,-360],[-94,-220],[-82,-105],[11,-16],[101,125]],[[272,172],[418,100],[554,31],[612,-53],[628,-156],[671,-268],[720,-372],[700,-512],[529,-577],[368,-573],[211,-594],[68,-538],[16,-465],[-57,-374],[-102,-268],[-30,-159],[-16,-62],[-11,134],[90,205]],[[290,163],[486,174],[608,90],[643,-60],[680,-162],[795,-257],[891,-422],[739,-534],[451,-483],[371,-583],[218,-738],[14,-618],[-14,-485],[-86,-383],[-133,-277],[-113,-139],[-147,-2],[-93,144],[130,172]],[[316,16],[408,-8],[591,35],[700,-48],[763,-194],[700,-311],[724,-469],[589,-666],[418,-648],[231,-570],[111,-453],[44,-390],[-17,-296],[-272,-163],[-260,25],[-84,99],[112,193]]];
-const LEVEL_NAMES = ['Harbor Oval', 'Lantern Loop', 'Quayside Sweep', 'Pine Ridge', 'Breakwater', 'Signal Hill', 'Tidewater', 'Old Mill Esses', 'Beacon Point', 'Saltmarsh', 'Cannery Row', 'Afterglow Circuit'];
-const LEVEL_STARS = [1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 5, 5];
-const LEVELS = LEVEL_NAMES.map((name, i) => {
-  const d = i / 11;
-  return { n: i + 1, name, stars: LEVEL_STARS[i], pts: i < 11 ? GEN_TRACKS[i] : ORIGINAL_CTRL,
-    botSkill: 0.9 + 0.075 * d, botUpg: Math.round(d * 4), aggr: i >= 6 ? (i - 5) / 6 : 0 };
+// Circuits come from levels.json (edited with editor.html); this copy is the offline fallback.
+const BUILTIN_LEVELS = [{"name":"Harbor Sprint","stars":1,"track":[[0,-600],[0,-300],[0,0],[20,200],[120,300],[300,320],[480,300],[600,220],[640,60],[560,-60],[600,-200],[640,-400],[560,-560],[380,-620],[180,-640],[60,-640]]},{"name":"Lantern Loop","stars":1,"track":[[0,-500],[0,-150],[0,150],[60,300],[220,330],[330,240],[330,60],[420,-40],[620,-20],[760,60],[860,-40],[820,-250],[640,-380],[420,-440],[260,-600],[100,-640]]},{"name":"Quayside Chicane","stars":2,"track":[[-200,-400],[-200,-100],[-150,150],[0,300],[250,340],[500,300],[700,200],[800,40],[780,-120],[690,-170],[640,-250],[700,-340],[720,-480],[600,-620],[300,-660],[40,-620],[-120,-540]]},{"name":"Pine Ridge","stars":2,"track":[[293,195],[473,150],[623,33],[645,-95],[625,-229],[660,-333],[662,-501],[490,-621],[305,-631],[122,-614],[-46,-517],[-59,-353],[-4,-235],[-37,-111],[-43,73],[102,187]]},{"name":"Breakwater","stars":2,"track":[[276,155],[430,192],[609,145],[671,32],[605,-147],[557,-201],[550,-270],[619,-384],[623,-509],[504,-610],[345,-615],[248,-598],[94,-561],[-10,-508],[-77,-392],[-67,-301],[-38,-224],[-10,-126],[22,-29],[84,46],[197,119]]},{"name":"Signal Hill","stars":3,"track":[[289,236],[438,184],[539,106],[627,12],[666,-76],[660,-177],[655,-241],[685,-336],[718,-453],[667,-618],[573,-680],[369,-695],[213,-635],[133,-567],[62,-466],[-10,-394],[-93,-345],[-176,-266],[-188,-146],[-108,-47],[-28,30],[49,129],[152,212]]},{"name":"Tidewater","stars":3,"track":[[335,258],[474,273],[598,154],[627,4],[700,-110],[764,-187],[743,-320],[662,-419],[623,-529],[566,-631],[404,-691],[250,-644],[92,-583],[-20,-549],[-131,-419],[-133,-332],[-150,-199],[-168,-77],[-97,16],[82,63],[180,129]]},{"name":"Old Mill Esses","stars":3,"track":[[295,239],[530,164],[662,60],[715,-102],[659,-248],[648,-348],[584,-489],[487,-550],[291,-688],[57,-721],[-55,-524],[-26,-360],[-94,-220],[-82,-105],[11,-16],[101,125]]},{"name":"Beacon Point","stars":4,"track":[[272,172],[418,100],[554,31],[612,-53],[628,-156],[671,-268],[720,-372],[700,-512],[529,-577],[368,-573],[211,-594],[68,-538],[16,-465],[-57,-374],[-102,-268],[-30,-159],[-16,-62],[-11,134],[90,205]]},{"name":"Saltmarsh","stars":4,"track":[[290,163],[486,174],[608,90],[643,-60],[680,-162],[795,-257],[891,-422],[739,-534],[451,-483],[371,-583],[218,-738],[14,-618],[-14,-485],[-86,-383],[-133,-277],[-113,-139],[-147,-2],[-93,144],[130,172]]},{"name":"Cannery Row","stars":5,"track":[[316,16],[408,-8],[591,35],[700,-48],[763,-194],[700,-311],[724,-469],[589,-666],[418,-648],[231,-570],[111,-453],[44,-390],[-17,-296],[-272,-163],[-260,25],[-84,99],[112,193]]},{"name":"Afterglow Circuit","stars":5,"track":[[0,-260],[0,-100],[0,60],[0,180],[15,250],[60,285],[120,280],[160,240],[170,180],[200,130],[260,120],[320,150],[350,210],[340,280],[360,340],[430,360],[500,330],[520,260],[500,180],[460,120],[460,40],[510,-20],[540,-100],[520,-190],[450,-240],[360,-230],[300,-180],[230,-190],[180,-250],[120,-320],[50,-330],[10,-300]]}];
+let LEVEL_DATA = BUILTIN_LEVELS;
+try { const r = await fetch('levels.json', { cache: 'no-store' }); if (r.ok) { const j = await r.json(); if (Array.isArray(j.levels) && j.levels.length) LEVEL_DATA = j.levels; } } catch {}
+const TEST_TRACK = store.get('level', 1) === 'test' ? store.get('testTrack', null) : null;
+const NL = LEVEL_DATA.length;
+const LEVELS = LEVEL_DATA.map((l, i) => {
+  const d = NL > 1 ? i / (NL - 1) : 0;
+  return { n: i + 1, name: l.name, stars: clamp(l.stars | 0 || 1, 1, 5), pts: l.track,
+    botSkill: l.botSkill ?? 0.9 + 0.075 * d, botUpg: l.botUpg ?? Math.round(d * 4), aggr: l.aggr ?? (d >= 0.5 ? (d - 0.45) / 0.55 : 0) };
 });
 const CAREER = Object.assign({ unlocked: 1, coins: 0, done: {}, best: {}, upg: { engine: 0, brakes: 0, steering: 0, trans: 0 }, tune: { drive: 0, down: 0.3, steer: 0, bias: 0 } }, store.get('career', {}));
 const saveCareer = () => store.set('career', CAREER);
-let LEVEL = clamp(store.get('level', 1) | 0, 1, 12);
-const LV = LEVELS[LEVEL - 1];
+let LEVEL = TEST_TRACK ? NL + 1 : clamp(store.get('level', 1) | 0, 1, NL);
+const LV = TEST_TRACK ? { n: LEVEL, name: 'Test · ' + (TEST_TRACK.name || 'Untitled'), stars: TEST_TRACK.stars || 3, pts: TEST_TRACK.track, botSkill: 0.95, botUpg: 2, aggr: 0 } : LEVELS[LEVEL - 1];
 const TRACK_CTRL = LV.pts;
 const curve = new THREE.CatmullRomCurve3(TRACK_CTRL.map(([x, z]) => new V3(x, 0, z)), true, 'centripetal', 0.5);
 curve.arcLengthDivisions = 5000;
@@ -547,7 +553,7 @@ let IDEAL = 0;
   for (let p = 0; p < 2; p++) for (let i = 0; i < NS; i++) { const q = idx(i - 1); v[i] = Math.min(v[i], Math.sqrt(v[q] * v[q] + 2 * 7.5 * DS)); }
   for (let i = 0; i < NS; i++) IDEAL += DS / Math.max(v[i], 5);
 }
-const TARGET_LAP = IDEAL * lerp(1.04, 0.935, (LEVEL - 1) / 11);
+const TARGET_LAP = IDEAL * lerp(1.04, 0.935, clamp((LEVEL - 1) / Math.max(NL - 1, 1), 0, 1));
 let TURNS = 0;
 { let inTurn = false; for (let i = 0; i < NS; i++) { const k = Math.abs(CURV[i]) > 1 / 190; if (k && !inTurn) TURNS++; inTurn = k; } }
 
@@ -2145,6 +2151,7 @@ function goalsFor(L) {
   ];
 }
 function scoreRace() {
+  if (TEST_TRACK) return { rows: [], earned: 0, unlockedNew: false, p: positions().indexOf(player) + 1 };
   const p = positions().indexOf(player) + 1, L = LEVEL;
   const met = { podium: p <= 3, win: p === 1, clean: !(player.penalty > 0), lap: player.bestLap != null && player.bestLap < TARGET_LAP };
   const prev = CAREER.done[L] || []; let earned = 0;
@@ -2152,8 +2159,8 @@ function scoreRace() {
   CAREER.done[L] = [...new Set([...prev, ...rows.filter((r) => r.ok).map((r) => r.id)])];
   CAREER.coins += earned;
   if (!CAREER.best[L] || p < CAREER.best[L]) CAREER.best[L] = p;
-  const unlockedNew = met.podium && L < 12 && CAREER.unlocked <= L;
-  if (met.podium) CAREER.unlocked = Math.max(CAREER.unlocked, Math.min(12, L + 1));
+  const unlockedNew = met.podium && L < NL && CAREER.unlocked <= L;
+  if (met.podium) CAREER.unlocked = Math.max(CAREER.unlocked, Math.min(NL, L + 1));
   saveCareer();
   return { rows, earned, unlockedNew, p };
 }
@@ -2172,7 +2179,7 @@ function showResults() {
   const sc = scoreRace(), ul = $('resGoals'); ul.innerHTML = '';
   for (const r of sc.rows) { const li = document.createElement('li'); li.className = r.ok ? 'ok' : ''; const a = document.createElement('span'); a.textContent = (r.ok ? '✓ ' : '✗ ') + r.text; const b = document.createElement('span'); b.textContent = r.ok ? '+' + r.c + (r.first ? '' : ' (repeat)') : '—'; li.append(a, b); ul.append(li); }
   $('resCoins').textContent = `Goals · +${sc.earned} coins · ${CAREER.coins} total` + (sc.unlockedNew ? ` · ${LEVELS[LEVEL].name} unlocked` : '');
-  $('rNext').hidden = !(LEVEL < 12 && CAREER.unlocked > LEVEL);
+  $('rNext').hidden = !(LEVEL < NL && CAREER.unlocked > LEVEL);
   refreshCareerUI();
   showScreen('results'); ($('rNext').hidden ? $('rAgain') : $('rNext')).focus();
 }
@@ -2195,8 +2202,8 @@ const levelLen = LEVELS.map((l) => { const c = new THREE.CatmullRomCurve3(l.pts.
 const starStr = (n) => '★'.repeat(n) + '<span class="off">' + '★'.repeat(5 - n) + '</span>';
 function refreshCareerUI() {
   for (const id of ['coinTitle', 'coinCareer', 'coinShop']) $(id).textContent = CAREER.coins;
-  $('careerSub').textContent = `Level ${Math.min(CAREER.unlocked, 12)} of 12 unlocked`;
-  $('kicker').textContent = `Harbor night race · Level ${LEVEL} · ${LV.name}`;
+  $('careerSub').textContent = `Level ${Math.min(CAREER.unlocked, NL)} of ${NL} unlocked`; $('seasonLbl').textContent = `Season · ${NL} circuits`;
+  $('kicker').textContent = TEST_TRACK ? `Editor test drive · ${LV.name}` : `Harbor night race · Level ${LEVEL} · ${LV.name}`;
 }
 function renderTimeline() {
   const tl = $('timeline'); tl.innerHTML = '';
@@ -2355,7 +2362,7 @@ function updateWorldFx(dt) {
 }
 /* ---------------- Day & night ---------------- */
 const TOD_PRESET = { dawn: 0.265, day: 0.43, dusk: 0.758, night: 0.95 };
-const TOD = { mode: store.get('tod', 'cycle'), t: 0.72, len: 360, envT: -1, envAt: 0 };
+const TOD = { mode: store.get('tod', 'cycle'), t: 0.68, len: 360, envT: -1, envAt: 0 };
 const _sd = new V3(), _perp = new V3(SUNXZ.y, 0, -SUNXZ.x);
 function sunFor(t) { const th = 2 * Math.PI * (t - 0.25), c = Math.cos(th), sn = Math.sin(th); return _sd.set(-SUNXZ.x * c, sn * 0.93, -SUNXZ.y * c).addScaledVector(_perp, 0.35 * sn).normalize(); }
 const NIGHT_FOG = new V3(...FOG_BASE), DAY_FOG = new V3(0.46, 0.56, 0.74), WARM = new V3(0.52, 0.22, 0.12);
@@ -2379,17 +2386,20 @@ function updateTOD(dt) {
   compMat.uniforms.uExposure.value = lerp(1.9, 1.0, day);
   prefilterMat.uniforms.uThreshold.value = lerp(0.9, 2.4, day);
   TOD.envAt -= dt;
-  if (Math.abs(TOD.t - TOD.envT) > 0.004 && TOD.envAt <= 0) { TOD.envT = TOD.t; TOD.envAt = 0.8; refreshEnv(); }
+  if (Math.abs(TOD.t - TOD.envT) > 0.012 && TOD.envAt <= 0) { TOD.envT = TOD.t; TOD.envAt = 6; refreshEnv(); }
 }
 function setTOD(m) { TOD.mode = m; store.set('tod', m); document.querySelectorAll('.todSeg button').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.t === m))); }
 document.querySelectorAll('.todSeg button').forEach((b) => b.addEventListener('click', () => setTOD(b.dataset.t)));
 function perf(dt) {
-  if (Q.preset !== 'auto') return;
+  // Resolution changes recreate render targets (a visible hitch), so only react to sustained slowness,
+  // ignore the first seconds after load while shaders warm up, and step up rarely.
+  if (Q.preset !== 'auto' || G.time < 5) return;
   perfAcc += dt; perfN++; perfT += dt;
-  if (perfT > 2) {
+  if (perfT > 3) {
     const avg = perfAcc / perfN; perfT = perfAcc = perfN = 0;
-    if (avg > 1 / 42 && Q.dyn > 0.55) { Q.dyn = Math.max(0.55, Q.dyn - 0.1); resize(); }
-    else if (avg < 1 / 57 && Q.dyn < 1) { Q.dyn = Math.min(1, Q.dyn + 0.05); resize(); }
+    if (avg > 1 / 38) { Q.slow = (Q.slow || 0) + 1; Q.fast = 0; } else if (avg < 1 / 57) { Q.fast = (Q.fast || 0) + 1; Q.slow = 0; } else Q.slow = Q.fast = 0;
+    if (Q.slow >= 2 && Q.dyn > 0.55) { Q.dyn = Math.max(0.55, Q.dyn - 0.15); Q.slow = 0; resize(); }
+    else if (Q.fast >= 5 && Q.dyn < 1) { Q.dyn = Math.min(1, Q.dyn + 0.15); Q.fast = 0; resize(); }
   }
 }
 function frame(now) {
@@ -2428,6 +2438,8 @@ updateCamera(1 / 60);
 setLoad(0.9, 'Warming the tyres');
 await tick();
 try { await renderer.compileAsync(scene, camera); } catch { renderer.compile(scene, camera); }
+refreshEnv();
+for (let i = 0; i < 3; i++) { renderFrame(); await tick(); } // first real frames compile the post passes before the title shows
 renderFrame();
 setLoad(1, 'Ready');
 $('loading').classList.add('done');
