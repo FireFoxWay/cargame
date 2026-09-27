@@ -16,6 +16,12 @@ Rivals get stronger as you progress: better drivers and upgraded cars (up to sta
 
 Pick **Harbour**, **City** (skyscrapers along the track) or **Forest** (dense pines up to the barriers) on the title screen. The game rebuilds the world around the current circuit; the choice is remembered.
 
+## Music
+
+On the title screen or in the pause menu, **Add songs** or **Add folder** plays any MP3, MP4, M4A, OGG, WAV or FLAC you pick. They're kept in your browser for next time. **Car radio** runs the music through an old factory car stereo (mono, thin, a bit crunchy, with a little FM hiss); **Clean** plays it straight. Keys: **N** next song, **B** radio/clean.
+
+To ship songs with the game for everyone, put them in `music/` and list them in `music/playlist.json` (see `music/README.md`).
+
 ## Workshop
 
 Spend coins on five stages each of **engine**, **brakes**, **steering & tyres** and **transmission**. The free setup sliders tune final drive, downforce, steering ratio and brake bias.

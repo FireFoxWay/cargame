@@ -118,6 +118,12 @@ kbd{font-family:var(--mono);font-size:10px;color:var(--text);border:1px solid rg
 .toast{position:absolute;left:50%;bottom:calc(var(--sb) + 10px);transform:translateX(-50%);font-size:11px;letter-spacing:.18em;text-transform:uppercase;background:var(--panel);border:1px solid var(--edge);padding:7px 12px;border-radius:3px;opacity:0;transition:opacity .25s}
 .toast.show{opacity:1}
 
+/* music */
+.row.music{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.row.music .btn{min-width:0;padding:7px 11px}
+.row.music .btn b{font-size:15px}
+.mVol{width:90px;accent-color:var(--sodium)}
+.mNow{font-size:11px;color:var(--muted);max-width:26ch;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 /* career & workshop */
 .coins{display:inline-flex;align-items:center;gap:8px;font-family:var(--display);font-weight:800;font-size:22px;color:var(--sodium);font-variant-numeric:tabular-nums}
 .coins i{width:14px;height:14px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#ffe7b8,var(--sodium) 55%,#b8651f);box-shadow:0 0 10px rgba(255,178,92,.5)}
@@ -212,6 +218,8 @@ body.touch .gauge small{font-size:8px}
 <body>
 <canvas id="gl" tabindex="0" aria-label="Race view"></canvas>
 
+<input type="file" id="mFile" accept="audio/*,video/mp4,.mp3,.mp4,.m4a,.ogg,.wav,.flac,.aac,.webm" multiple hidden>
+<input type="file" id="mDir" webkitdirectory multiple hidden>
 <div id="loading">
   <div class="inner">
     <div class="mark"><span>Afterglow</span>Circuit</div>
@@ -238,6 +246,14 @@ body.touch .gauge small{font-size:8px}
     </div>
     <div class="opt"><span class="lbl">Coins</span><span class="coins"><i></i><span id="coinTitle">0</span></span>
     </div>
+    <div class="opt"><span class="lbl">Music</span><div class="row music">
+      <button class="btn slim mAdd" type="button"><b>Add songs</b></button>
+      <button class="btn slim mFolder" type="button"><b>Add folder</b></button>
+      <button class="btn slim mNext" type="button" aria-label="Next song"><b>Next ▸</b></button>
+      <div class="seg mRadio" role="radiogroup" aria-label="Music sound"><button data-r="1">Car radio</button><button data-r="0">Clean</button></div>
+      <input class="mVol" type="range" min="0" max="1" step="0.05" aria-label="Music volume">
+      <span class="mNow"></span>
+    </div></div>
     <div class="opt"><span class="lbl">Scenery</span><div class="seg" id="scenerySeg" role="radiogroup" aria-label="Scenery"><button data-s="harbor">Harbour</button><button data-s="city">City</button><button data-s="forest">Forest</button></div></div>
     <div class="opt"><span class="lbl">Paint</span><div id="paints" class="swatches" role="radiogroup" aria-label="Paint"></div><span id="paintName" class="pname"></span></div>
     <div class="opt"><span class="lbl">Time</span><div class="seg todSeg" role="radiogroup" aria-label="Time of day"><button data-t="cycle">Cycle</button><button data-t="dawn">Dawn</button><button data-t="day">Day</button><button data-t="dusk">Dusk</button><button data-t="night">Night</button></div></div>
@@ -250,6 +266,8 @@ body.touch .gauge small{font-size:8px}
       <li><kbd>C</kbd> Camera</li>
       <li><kbd>R</kbd> Back on track</li>
       <li><kbd>M</kbd> Sound on/off</li>
+      <li><kbd>N</kbd> Next song</li>
+      <li><kbd>B</kbd> Radio / clean</li>
       <li><kbd>Esc</kbd> Pause</li>
     </ul>
     <p class="touchnote" id="touchNote" hidden>Touch pads appear during the race: steer on the left, gas and brake on the right. A gamepad works too.</p>
@@ -300,6 +318,14 @@ body.touch .gauge small{font-size:8px}
     <div class="opt"><span class="lbl">Camera</span><div class="seg" id="camSeg" role="radiogroup" aria-label="Camera"><button data-c="0">Chase</button><button data-c="1">Far</button><button data-c="2">Hood</button><button data-c="3">TV</button></div></div>
     <div class="opt"><span class="lbl">Time</span><div class="seg todSeg" role="radiogroup" aria-label="Time of day"><button data-t="cycle">Cycle</button><button data-t="dawn">Dawn</button><button data-t="day">Day</button><button data-t="dusk">Dusk</button><button data-t="night">Night</button></div></div>
     <div class="opt"><span class="lbl">Rain</span><div class="seg" id="rainSeg" role="radiogroup" aria-label="Rain"><button data-r="1">Drizzle</button><button data-r="0">Dry air</button></div></div>
+    <div class="opt"><span class="lbl">Music</span><div class="row music">
+      <button class="btn slim mAdd" type="button"><b>Add songs</b></button>
+      <button class="btn slim mFolder" type="button"><b>Add folder</b></button>
+      <button class="btn slim mNext" type="button" aria-label="Next song"><b>Next ▸</b></button>
+      <div class="seg mRadio" role="radiogroup" aria-label="Music sound"><button data-r="1">Car radio</button><button data-r="0">Clean</button></div>
+      <input class="mVol" type="range" min="0" max="1" step="0.05" aria-label="Music volume">
+      <span class="mNow"></span>
+    </div></div>
     <div class="opt"><span class="lbl">Sound</span><div class="seg" id="sndSeg" role="radiogroup" aria-label="Sound"><button data-s="1">On</button><button data-s="0">Off</button></div></div>
     <div class="opt"><span class="lbl">Graphics</span><div class="seg qualSeg" role="radiogroup" aria-label="Graphics quality"><button data-q="auto">Auto</button><button data-q="high">High</button><button data-q="medium">Med</button><button data-q="low">Low</button></div></div>
   </div>
@@ -2023,6 +2049,82 @@ const Snd = {
 };
 
 /* ============================================================
+   Music: your own songs, optionally through a car radio
+   ============================================================ */
+const Music = {
+  tracks: [], i: -1, el: null, radio: store.get('radio', 1), vol: store.get('musicVol', 0.6), built: false,
+  // Songs picked in the game live in IndexedDB so they survive restarts.
+  db() { return new Promise((res, rej) => { const r = indexedDB.open('afterglow-music', 1); r.onupgradeneeded = () => r.result.createObjectStore('songs', { keyPath: 'name' }); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); },
+  async loadSaved() {
+    try { const db = await this.db(); const all = await new Promise((res) => { const q = db.transaction('songs').objectStore('songs').getAll(); q.onsuccess = () => res(q.result); q.onerror = () => res([]); }); for (const s of all) this.tracks.push({ name: s.name, url: URL.createObjectURL(s.blob) }); } catch {}
+    try { const r = await fetch('music/playlist.json', { cache: 'no-store' }); if (r.ok) { const j = await r.json(); for (const f of j.songs || j) { const name = typeof f === 'string' ? f : f.file; if (name && !this.tracks.some((t) => t.name === name)) this.tracks.push({ name, url: 'music/' + encodeURIComponent(name) }); } } } catch {}
+    this.ui();
+  },
+  async add(files) {
+    const ok = [...files].filter((f) => /^(audio|video)\//.test(f.type) || /\.(mp3|mp4|m4a|ogg|oga|wav|flac|aac|webm|opus)$/i.test(f.name));
+    if (!ok.length) { toast('No audio or video files in that selection'); return; }
+    let db = null; try { db = await this.db(); } catch {}
+    for (const f of ok) {
+      if (this.tracks.some((t) => t.name === f.name)) continue;
+      this.tracks.push({ name: f.name, url: URL.createObjectURL(f) });
+      if (db) try { db.transaction('songs', 'readwrite').objectStore('songs').put({ name: f.name, blob: f }); } catch {}
+    }
+    toast(`${ok.length} song${ok.length > 1 ? 's' : ''} added · ${this.tracks.length} in the playlist`);
+    this.ui(); if (!this.playing()) this.next();
+  },
+  playing() { return this.el && !this.el.paused; },
+  build() {
+    Snd.init(); const ctx = Snd.ctx; if (!ctx || this.built) return; this.built = true;
+    this.el = new Audio(); this.el.crossOrigin = 'anonymous'; this.el.preload = 'auto';
+    this.el.addEventListener('ended', () => this.next());
+    this.el.addEventListener('error', () => { toast('Could not play ' + (this.tracks[this.i]?.name || 'that file')); setTimeout(() => this.next(), 400); });
+    const src = ctx.createMediaElementSource(this.el);
+    this.out = ctx.createGain(); this.out.gain.value = this.vol; this.out.connect(Snd.master);
+    this.clean = ctx.createGain(); src.connect(this.clean).connect(this.out);
+    // A 2010s factory head unit through small door speakers: mono, narrow band, a mid honk,
+    // soft clipping, heavy compression, a little tape wobble and FM hiss.
+    const mono = ctx.createGain(); mono.channelCount = 1; mono.channelCountMode = 'explicit'; mono.channelInterpretation = 'speakers';
+    const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 280; hp.Q.value = 0.9;
+    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 3600; lp.Q.value = 1.1;
+    const honk = ctx.createBiquadFilter(); honk.type = 'peaking'; honk.frequency.value = 1400; honk.Q.value = 1.2; honk.gain.value = 6;
+    const box = ctx.createBiquadFilter(); box.type = 'peaking'; box.frequency.value = 420; box.Q.value = 2; box.gain.value = 3;
+    const drive = ctx.createWaveShaper(); const cv = new Float32Array(2048); for (let k = 0; k < 2048; k++) { const x = k / 1023.5 - 1; cv[k] = Math.tanh(x * 2.2) / Math.tanh(2.2); } drive.curve = cv; drive.oversample = '2x';
+    const comp = ctx.createDynamicsCompressor(); comp.threshold.value = -28; comp.ratio.value = 8; comp.attack.value = 0.004; comp.release.value = 0.18;
+    const wob = ctx.createDelay(0.05); wob.delayTime.value = 0.012;
+    const lfo = ctx.createOscillator(); lfo.frequency.value = 0.55; const lfoG = ctx.createGain(); lfoG.gain.value = 0.0009; lfo.connect(lfoG).connect(wob.delayTime); lfo.start();
+    this.radioBus = ctx.createGain();
+    src.connect(mono).connect(hp).connect(box).connect(honk).connect(lp).connect(drive).connect(comp).connect(wob).connect(this.radioBus).connect(this.out);
+    const hiss = Snd.src(); const hf = ctx.createBiquadFilter(); hf.type = 'bandpass'; hf.frequency.value = 5200; hf.Q.value = 0.6;
+    this.hiss = ctx.createGain(); hiss.connect(hf).connect(this.hiss).connect(this.out);
+    this.applyRadio();
+  },
+  applyRadio() {
+    if (!this.built) return; const t = Snd.ctx.currentTime, r = !!this.radio;
+    this.clean.gain.setTargetAtTime(r ? 0 : 1, t, 0.05); this.radioBus.gain.setTargetAtTime(r ? 1.25 : 0, t, 0.05); this.hiss.gain.setTargetAtTime(r ? 0.006 : 0, t, 0.05);
+  },
+  next() {
+    if (!this.tracks.length) { toast('Add songs first: MP3, MP4 or any audio file'); return; }
+    this.build(); if (!this.el) return;
+    this.i = (this.i + 1) % this.tracks.length; const tr = this.tracks[this.i];
+    this.el.src = tr.url; this.el.play().then(() => toast('♪ ' + tr.name.replace(/\.[^.]+$/, ''))).catch(() => {});
+    this.ui();
+  },
+  ui() {
+    const name = this.i >= 0 && this.tracks[this.i] ? this.tracks[this.i].name.replace(/\.[^.]+$/, '') : this.tracks.length ? `${this.tracks.length} song${this.tracks.length > 1 ? "s" : ""} ready` : 'No songs yet';
+    document.querySelectorAll('.mNow').forEach((e) => (e.textContent = name));
+    document.querySelectorAll('.mRadio button').forEach((b) => b.setAttribute('aria-checked', String(+b.dataset.r === (this.radio ? 1 : 0))));
+    document.querySelectorAll('.mVol').forEach((e) => (e.value = this.vol));
+  },
+};
+document.querySelectorAll('.mAdd').forEach((b) => b.addEventListener('click', () => $('mFile').click()));
+document.querySelectorAll('.mFolder').forEach((b) => b.addEventListener('click', () => $('mDir').click()));
+document.querySelectorAll('.mNext').forEach((b) => b.addEventListener('click', () => Music.next()));
+document.querySelectorAll('.mRadio button').forEach((b) => b.addEventListener('click', () => { Music.radio = +b.dataset.r; store.set('radio', Music.radio); Music.applyRadio(); Music.ui(); }));
+document.querySelectorAll('.mVol').forEach((e) => e.addEventListener('input', () => { Music.vol = +e.value; store.set('musicVol', Music.vol); if (Music.out) Music.out.gain.setTargetAtTime(Music.vol, Snd.ctx.currentTime, 0.05); Music.ui(); }));
+for (const id of ['mFile', 'mDir']) $(id).addEventListener('change', (e) => { Music.add(e.target.files); e.target.value = ''; });
+Music.loadSaved();
+
+/* ============================================================
    Input
    ============================================================ */
 const keys = Object.create(null), touch = { left: false, right: false, gas: false, brake: false, hand: false };
@@ -2035,6 +2137,8 @@ addEventListener('keydown', (e) => {
   else if (e.code === 'KeyC' && racing && !G.paused) setCam((G.camMode + 1) % 4, true);
   else if (e.code === 'KeyR' && G.state === 'race' && !G.paused) respawn(player, player.ti, 0);
   else if (e.code === 'KeyM') setSound(!G.sound, true);
+  else if (e.code === 'KeyN') Music.next();
+  else if (e.code === 'KeyB') { Music.radio = Music.radio ? 0 : 1; store.set('radio', Music.radio); Music.applyRadio(); Music.ui(); toast(Music.radio ? 'Car radio' : 'Clean audio'); }
   else if (e.code === 'Escape' && !$('career').hidden) $('career').hidden = true;
   else if (e.code === 'Escape' && !$('shop').hidden) $('shop').hidden = true;
 });
@@ -2168,6 +2272,7 @@ function togglePause(force) {
 function fadeThen(fn) { G.fadeTarget = 0; setTimeout(() => { fn(); G.fadeTarget = 1; }, 380); }
 function startRace(mode) {
   Snd.init();
+  if (Music.tracks.length && !Music.playing()) Music.next();
   fadeThen(() => { setupRace(mode); showScreen('hud'); $('lights').hidden = false; hud.lights.forEach((l) => l.classList.remove('on')); startLightMats.forEach((m) => m.color.setRGB(0.08, 0.005, 0.005)); canvas.focus(); });
 }
 function toMenu() { togglePause(false); fadeThen(() => { setupAttract(); showScreen('title'); fitLogo(); refreshRecord(); $('btnRace').focus(); }); }
