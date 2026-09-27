@@ -12,6 +12,10 @@ Every race has four goals (podium, win, no off-track penalties, a target lap tim
 
 Rivals get stronger as you progress: better drivers and upgraded cars (up to stage 4 of 5 on the final circuit). From level 7 on they race dirty and will now and then lean on you to push you into the mud.
 
+## Scenery
+
+Pick **Harbour**, **City** (skyscrapers along the track) or **Forest** (dense pines up to the barriers) on the title screen. The game rebuilds the world around the current circuit; the choice is remembered.
+
 ## Workshop
 
 Spend coins on five stages each of **engine**, **brakes**, **steering & tyres** and **transmission**. The free setup sliders tune final drive, downforce, steering ratio and brake bias.

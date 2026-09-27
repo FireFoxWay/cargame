@@ -238,6 +238,7 @@ body.touch .gauge small{font-size:8px}
     </div>
     <div class="opt"><span class="lbl">Coins</span><span class="coins"><i></i><span id="coinTitle">0</span></span>
     </div>
+    <div class="opt"><span class="lbl">Scenery</span><div class="seg" id="scenerySeg" role="radiogroup" aria-label="Scenery"><button data-s="harbor">Harbour</button><button data-s="city">City</button><button data-s="forest">Forest</button></div></div>
     <div class="opt"><span class="lbl">Paint</span><div id="paints" class="swatches" role="radiogroup" aria-label="Paint"></div><span id="paintName" class="pname"></span></div>
     <div class="opt"><span class="lbl">Time</span><div class="seg todSeg" role="radiogroup" aria-label="Time of day"><button data-t="cycle">Cycle</button><button data-t="dawn">Dawn</button><button data-t="day">Day</button><button data-t="dusk">Dusk</button><button data-t="night">Night</button></div></div>
     <div class="opt"><span class="lbl">Graphics</span><div class="seg qualSeg" role="radiogroup" aria-label="Graphics quality"><button data-q="auto">Auto</button><button data-q="high">High</button><button data-q="medium">Medium</button><button data-q="low">Low</button></div></div>
@@ -439,6 +440,7 @@ vec3 applyAtmos(vec3 col, vec3 dir, float density){
 }
 `;
 const FOG_DENSITY = 0.0017;
+const SCENERY = ['harbor', 'city', 'forest'].includes(store.get('scenery', 'harbor')) ? store.get('scenery', 'harbor') : 'harbor';
 // Shared time-of-day uniforms: every material that fogs or draws sky reads these.
 const ATMO = { uSunDir: { value: new V3(SUNXZ.x, -0.035, SUNXZ.y).normalize() }, uFogBase: { value: new V3(...FOG_BASE) }, uGlowCol: { value: new V3(0.52, 0.22, 0.12) }, uNight: { value: 1 }, uDay: { value: 0 } };
 
@@ -729,6 +731,8 @@ const terrainMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughnes
     uv.setXY(i, x / 14, z / 14);
     const n = vnoise(x * 0.02, z * 0.02);
     let c = [lerp(0.04, 0.085, n), lerp(0.06, 0.075, n), lerp(0.025, 0.04, n)];
+    if (SCENERY === 'city') { const u = 1 - smooth(260, 520, distAt(x, z)); c = c.map((v, k) => lerp(v, [0.07, 0.072, 0.078][k] * (0.8 + 0.4 * n), u)); }
+    if (SCENERY === 'forest') c = c.map((v, k) => v * [0.75, 0.9, 0.8][k]);
     const rock = smooth(45, 140, h); c = c.map((v, k) => lerp(v, [0.03, 0.03, 0.034][k], rock));
     const sand = smooth(-3.5, -0.8, h) * (1 - smooth(0.6, 2.4, h)) * smooth(300, 420, z);
     c = c.map((v, k) => lerp(v, [0.10, 0.085, 0.062][k], sand));
@@ -1093,17 +1097,17 @@ function mergeGeos(list) {
 {
   const fol = mergeGeos([new THREE.ConeGeometry(2.3, 4.2, 8).translate(0, 3.3, 0), new THREE.ConeGeometry(1.75, 3.6, 8).translate(0, 5.3, 0), new THREE.ConeGeometry(1.15, 3.0, 8).translate(0, 7.1, 0)]);
   const trunk = new THREE.CylinderGeometry(0.16, 0.26, 2.4, 6).translate(0, 1.2, 0);
-  const N = 2600;
+  const N = SCENERY === 'forest' ? 9000 : SCENERY === 'city' ? 700 : 2600;
   const fm = new THREE.InstancedMesh(fol, new THREE.MeshStandardMaterial({ color: 0x21402c, roughness: 0.92 }), N);
   const tm = new THREE.InstancedMesh(trunk, new THREE.MeshStandardMaterial({ color: 0x2a1d14, roughness: 0.95 }), N);
   const cc = new THREE.Color(); let n = 0, tries = 0;
-  while (n < N && tries < 60000) {
+  while (n < N && tries < 160000) {
     tries++;
     const x = lerp(-750, 1450, R()), z = lerp(-1050, 520, R());
-    const d = distAt(x, z); if (d < BARRIER + 6 || d > 900) continue;
+    const d = distAt(x, z); if (d < BARRIER + (SCENERY === 'forest' ? 3.5 : 6) || d > 900 || (SCENERY === 'city' && d < 420)) continue;
     const h = terrainH(x, z); if (h < 0.4) continue;
-    const cluster = fbm(x * 0.012 + 5, z * 0.012 + 9, 3); if (cluster < 0.42 + (d < 60 ? 0.08 : 0)) continue;
-    const s = 0.75 + R() * 0.85, ry = R() * 6.28;
+    const cluster = fbm(x * 0.012 + 5, z * 0.012 + 9, 3); if (cluster < (SCENERY === 'forest' ? 0.3 - (d < 120 ? 0.1 : 0) : 0.42 + (d < 60 ? 0.08 : 0))) continue;
+    const s = (0.75 + R() * 0.85) * (SCENERY === 'forest' ? 1.35 : 1), ry = R() * 6.28;
     _q.setFromAxisAngle(UP, ry); _m.compose(_p.set(x, h - 0.2, z), _q, _s.set(s, s * (0.9 + R() * 0.35), s));
     fm.setMatrixAt(n, _m); tm.setMatrixAt(n, _m);
     fm.setColorAt(n, cc.setRGB(0.7 + R() * 0.5, 0.75 + R() * 0.45, 0.7 + R() * 0.4)); n++;
@@ -1159,6 +1163,30 @@ void main(){
   }
   geo.setAttribute('aSeed', new THREE.InstancedBufferAttribute(seeds, 1));
   scene.add(city);
+  if (SCENERY === 'city') {
+    // Downtown: towers along both sides of the track, kept clear of the barriers, lamps, grandstand and each other.
+    const spots = [];
+    for (let i = 0; i < NS; i += 9) {
+      if (Math.min(i, NS - i) * DS < 120) continue;
+      for (const side of [-1, 1]) {
+        const w = 14 + R() * 18, d = 14 + R() * 18, r = Math.hypot(w, d) / 2;
+        const [x, z] = trackPoint(i, side * (BARRIER + 11 + r + R() * 8));
+        if (distAt(x, z) < BARRIER + 7 + r) continue;
+        if (spots.some((q) => Math.hypot(q.x - x, q.z - z) < q.r + r + 3)) continue;
+        const tall = R() < 0.25;
+        spots.push({ x, z, w, d, r, h: tall ? 90 + R() * 130 : 22 + R() * 60, ry: HEAD[i] });
+      }
+    }
+    const g2 = new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0);
+    const seeds2 = new Float32Array(spots.length);
+    const towers = new THREE.InstancedMesh(g2, cityMat, spots.length);
+    spots.forEach((b, k) => { _q.setFromAxisAngle(UP, b.ry); _m.compose(_p.set(b.x, -0.5, b.z), _q, _s.set(b.w, b.h, b.d)); towers.setMatrixAt(k, _m); seeds2[k] = R(); });
+    g2.setAttribute('aSeed', new THREE.InstancedBufferAttribute(seeds2, 1));
+    scene.add(towers);
+    const reds = spots.filter((b) => b.h > 110);
+    const im = new THREE.InstancedMesh(new THREE.SphereGeometry(1.1, 8, 6), blinkMats[0] || new THREE.MeshBasicMaterial({ color: 0xff2020 }), Math.max(1, reds.length));
+    reds.forEach((b, k) => place(im, k, b.x, b.h + 1, b.z, 0)); im.count = reds.length; scene.add(im);
+  }
   for (let g = 0; g < 2; g++) {
     const m = new THREE.MeshBasicMaterial({ color: new THREE.Color(9, 0.4, 0.3) }); blinkMats.push(m);
     const im = new THREE.InstancedMesh(new THREE.SphereGeometry(1.4, 8, 6), m, tops.length); let k = 0;
@@ -1850,7 +1878,7 @@ function carVisual(c, dt) {
    Camera
    ============================================================ */
 const TVC = [];
-for (let i = 0; i < NS; i += 52) { const side = TVC.length % 2 ? 1 : -1; const [x, z] = trackPoint(i, side * (BARRIER + 5 + R() * 9)); TVC.push({ i, x, z, y: 2.4 + R() * 6 }); }
+for (let i = 0; i < NS; i += 52) { const side = TVC.length % 2 ? 1 : -1; const [x, z] = trackPoint(i, side * (BARRIER + 5 + R() * (SCENERY === 'harbor' ? 9 : 2))); TVC.push({ i, x, z, y: 2.4 + R() * 6 }); }
 const CAM = { yaw: 0, pull: 0, fov: 60, tv: -1, intro: 1, orbit: 0, look: new V3(), prev: new V3(), vel: new V3(), shakeT: 0 };
 const CAM_NAMES = ['Chase', 'Far chase', 'Hood', 'TV'];
 function camChase(c, dt, far) {
@@ -2192,6 +2220,10 @@ $('rShopBtn').addEventListener('click', () => openShop());
 $('rNext').addEventListener('click', () => goLevel(LEVEL + 1));
 $('cRace').addEventListener('click', () => goLevel(selLevel));
 let selLevel = LEVEL;
+document.querySelectorAll('#scenerySeg button').forEach((b) => {
+  b.setAttribute('aria-checked', String(b.dataset.s === SCENERY));
+  b.addEventListener('click', () => { if (b.dataset.s === SCENERY) return; store.set('scenery', b.dataset.s); G.fadeTarget = 0; $('loadMsg').textContent = 'Rebuilding the scenery'; setTimeout(() => location.reload(), 380); });
+});
 function goLevel(n) {
   if (n > CAREER.unlocked) return;
   if (n === LEVEL) { $('career').hidden = true; startRace('race'); return; }
