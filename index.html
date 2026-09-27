@@ -1443,7 +1443,7 @@ function locate(c, full) {
 function physics(c, dt, locked) {
   const sp = Math.sin(c.psi), cp = Math.cos(c.psi);
   let vf = c.vx * sp + c.vz * cp, vr = -c.vx * cp + c.vz * sp;
-  const vfPrev = vf, grass = c.surface === 2, gm = grass ? 0.6 : 1;
+  const vfPrev = vf, grass = false, gm = 1; // mud costs time, not speed (see mudPenalty)
   c.shiftT = Math.max(0, c.shiftT - dt);
   if (locked) { c.vx = c.vz = 0; c.speed = 0; c.yawRate = 0; c.accelLong = 0; c.slip = 0; return; }
   let a = 0;
@@ -1565,7 +1565,7 @@ function respawn(c, i, lat = 0) {
    ============================================================ */
 const G = { state: 'loading', mode: 'race', paused: false, time: 0, raceTime: 0, cd: 0, lightsOut: 0, goAt: 0, finishOrder: [], camMode: store.get('cam', 0), rain: store.get('rain', 1), sound: store.get('sound', 1), fade: 0, fadeTarget: 1, titleT: 0, record: store.get('best', null), splits: [], bestSplits: store.get('bestSplits', null), resultsAt: 0, finalLapShown: false };
 const active = () => cars.filter((c) => c.active);
-function resetCar(c, i, lat) { respawn(c, i, lat); c.vx = c.vz = 0; c.speed = 0; c.rpm = 900; c.gear = 1; c.half = false; c.laps = 0; c.lapStart = 0; c.lastLap = null; c.bestLap = null; c.finished = false; c.finishTime = 0; c.stuckT = 0; c.aiAvoid = 0; c.rubber = 1; c.wrongT = 0; c.throttle = c.brake = 0; c.steer = 0; }
+function resetCar(c, i, lat) { respawn(c, i, lat); c.vx = c.vz = 0; c.speed = 0; c.rpm = 900; c.gear = 1; c.half = false; c.laps = 0; c.lapStart = 0; c.lastLap = null; c.bestLap = null; c.finished = false; c.finishTime = 0; c.stuckT = 0; c.aiAvoid = 0; c.rubber = 1; c.penalty = 0; c.inMud = false; c.mudCool = 0; c.wrongT = 0; c.throttle = c.brake = 0; c.steer = 0; }
 function gridSlot(k) { const s = TL - (9 + 8 * k); return [idx(Math.round(s / DS)), k % 2 === 0 ? -2.6 : 2.6]; }
 function setupAttract() {
   G.state = 'title'; G.titleT = 0;
@@ -1603,9 +1603,18 @@ function completeLap(c) {
     }
   }
   if (G.mode === 'race' && c.laps >= LAPS && !c.finished) {
-    c.finished = true; c.finishTime = G.raceTime; G.finishOrder.push(c);
+    c.finished = true; c.finishTime = G.raceTime + (c.penalty || 0); G.finishOrder.push(c);
     if (c.isPlayer) { G.state = 'finished'; c.ai = true; c.skill = 0.8; const p = G.finishOrder.length; banner(p === 1 ? 'Winner' : 'P' + p, p === 1 ? 'gold' : '', 'Race time ' + fmtTime(c.finishTime)); G.resultsAt = G.time + 3.2; CAM.tv = -1; }
   }
+}
+const MUD_PENALTY = 2;
+function mudPenalty(c) {
+  const inMud = c.surface === 2;
+  if (inMud && !c.inMud && G.state === 'race' && !c.finished && G.time > (c.mudCool || 0)) {
+    c.lapStart -= MUD_PENALTY; c.penalty = (c.penalty || 0) + MUD_PENALTY; c.mudCool = G.time + 1;
+    if (c.isPlayer) { banner('+' + MUD_PENALTY + 's', 'warn', 'Off-track penalty'); Snd.beep(300, 0.25); }
+  }
+  c.inMud = inMud;
 }
 function updateLaps(c, prevS) {
   if (c.s > TL * 0.35 && c.s < TL * 0.65) c.half = true;
@@ -2013,7 +2022,7 @@ function stepWorld(dt) {
     if (hit > 2 && c.isPlayer) onImpact(hit, c.x - NXr[c.ti] * Math.sign(c.lat) * -1, c.z);
     if (hit > 0.5 && Math.random() < 0.5) { const [sx, sz] = trackPoint(c.ti, Math.sign(c.lat) * (BARRIER - 0.2)); for (let k = 0; k < 3; k++) sparks.emit(sx, 0.55, sz, c.vx * 0.6 + (Math.random() - 0.5) * 3, 1 + Math.random() * 2, c.vz * 0.6 + (Math.random() - 0.5) * 3, 0.3 + Math.random() * 0.3, 0.08, 0.03, 1, 6, 2.2, 0.5, 1, 1); }
     gearbox(c, dt, locked);
-    if (G.state === 'race' || G.state === 'finished') updateLaps(c, prevS);
+    if (G.state === 'race' || G.state === 'finished') { mudPenalty(c); updateLaps(c, prevS); }
   }
   carCollisions(list);
   if (G.state === 'race' || G.state === 'finished') G.raceTime += dt;
