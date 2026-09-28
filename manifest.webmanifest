@@ -1,19 +1,61 @@
 {
   "name": "Afterglow Circuit",
   "short_name": "Afterglow",
-  "description": "A 3D night racing game on a wet harbour circuit.",
+  "description": "A 3D racing game: career circuits and the Aethelgard Bay open world, with day, night and weather.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "fullscreen",
-  "display_override": ["fullscreen", "standalone"],
+  "display_override": [
+    "fullscreen",
+    "standalone"
+  ],
   "orientation": "landscape",
   "background_color": "#060913",
   "theme_color": "#060913",
   "icons": [
-    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
-    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
   ],
   "shortcuts": [
-    { "name": "Level editor", "url": "./editor.html", "icons": [{ "src": "icon.svg", "sizes": "any" }] }
+    {
+      "name": "Open world",
+      "url": "./index.html?mode=world",
+      "icons": [
+        {
+          "src": "icon.svg",
+          "sizes": "any"
+        }
+      ]
+    },
+    {
+      "name": "Circuits",
+      "url": "./index.html?mode=circuit",
+      "icons": [
+        {
+          "src": "icon.svg",
+          "sizes": "any"
+        }
+      ]
+    },
+    {
+      "name": "Level editor",
+      "url": "./editor.html",
+      "icons": [
+        {
+          "src": "icon.svg",
+          "sizes": "any"
+        }
+      ]
+    }
   ]
 }
